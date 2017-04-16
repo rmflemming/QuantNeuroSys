@@ -45,25 +45,39 @@ Y = kin(shift+1:end,:); % shifted kinetics
 X = X(1:end - shift,:); %take out trials without a decoding
 
 % Solve for A to build decoder
-A = mldivide(Y,X); % I define the decoder in continuous_decoder.m
-
+A = mvregress(X,Y); % I define the decoder in continuous_decoder.m
 %% 3) Observe and Quantify Results
 % Test decoder performance by multiplying the neural data by the
 % coefficient matrix A.
-train_test = continuous_decoder(A,X);
+train_test = X*A;
 
 % Plot the results in an informative format
 
 %Small Picture
-t_start = randi(length(kin)-1000-shift,1,1);
-t_end = t_start + 1000;
+% t_start = randi(length(kin)-1000-shift,1,1);
+% t_end = t_start + 1000;
+% figure;
+% comet(kin(t_start:t_end,:));
+% hold on
+% comet(train_test(t_start+shift:t_end+shift,:));
+% xlabel('Horizontal Position','fontweight','bold','fontsize',16); %These actually arive late
+% ylabel('Vertical Position','fontweight','bold','fontsize',16);
+% title('Monkey Hand movements, 7 seconds','fontweight','bold','fontsize',16);
 figure;
-comet(kin(t_start:t_end,:));
+subplot(2,1,1),scatter(Y(:,1),train_test(:,1),'.')%,'fontsize',16,'fontweight','bold);
+title('Horizontal Hand Position','fontsize',16,'fontweight','bold');
 hold on
-comet(train_test(t_start+shift:t_end+shift,:));
-xlabel('Horizontal Position','fontweight','bold','fontsize',16); %These actually arive late
-ylabel('Vertical Position','fontweight','bold','fontsize',16);
-title('Monkey Hand movements, 7 seconds','fontweight','bold','fontsize',16);
+ax1 = round(min(Y(:,1))):1:round(max(Y(:,1)))
+subplot(2,1,1),plot(ax1,ax1);
+hold off
+subplot(2,1,2),scatter(Y(:,2),train_test(:,2),'.')%,'fontsize',16,'fontweight','bold);
+title('Vertical Hand Position','fontsize',16,'fontweight','bold');
+hold on
+ax2 = round(min(Y(:,2))):1:round(max(Y(:,2)))
+subplot(2,1,2),plot(ax2,ax2);
+xlabel('Real Position','fontsize',16,'fontweight','bold')
+ylabel('Decoded Position','fontsize',16,'fontweight','bold')
+hold off
 
 %Big picture
 
@@ -72,33 +86,99 @@ title('Monkey Hand movements, 7 seconds','fontweight','bold','fontsize',16);
 
 % Quantify performance somehow. Consider measuring the MSE between actual
 % and reconstructed reaches. 
+Err = mean(sqrt((train_test(:) - Y(:)).^2); % I should use the distances but I'm lazy
 
 %% 4) Load continuous2 and attempt to reconstruct new kinematic data
 % Load data
 load('continuous2.mat');
+%Reformat the data according to shifts, and add coefficient column
+rate = rate(1:end-shift,:);
+X2 = [rate,ones(length(rate),1)];
+Y2 = kin(shift+1:end,:);
 
 % Predict outputs
-
+pred2 = continuous_decoder(A,X2);
 % Plot the reconstructions
+figure;
+subplot(2,1,1),scatter(Y2(:,1),pred2(:,1),'.')%,'fontsize',16,'fontweight','bold);
+title('Horizontal Hand Position','fontsize',16,'fontweight','bold');
+hold on
+ax1 = round(min(Y2(:,1))):1:round(max(Y2(:,1)))
+subplot(2,1,1),plot(ax1,ax1);
+hold off
+subplot(2,1,2),scatter(Y2(:,2),pred2(:,2),'.')%,'fontsize',16,'fontweight','bold);
+title('Vertical Hand Position','fontsize',16,'fontweight','bold');
+hold on
+ax2 = round(min(Y2(:,2))):1:round(max(Y2(:,2)))
+subplot(2,1,2),plot(ax2,ax2);
+xlabel('Real Position','fontsize',16,'fontweight','bold')
+ylabel('Decoded Position','fontsize',16,'fontweight','bold')
+hold off
 
 % Quantify the fit w/ correlation and MSE
+Err2 = mean((pred2(:) - Y2(:)).^2);
 
 % Compare to train/test on continuous.mat
 
-
 %% 5) Try various lags
 % 0, 70, 210 ms?
+load('continuous2.mat');
+lags = [-70 0 70 140 210];
+errs = zeros(1,length(lags));
+for i = 1:length(lags)
+    shift = lags(i)/70;
+    if shift >= 0
+        X = rate(1:end-shift,:);
+        X = [X ones(length(X),1)];
+        Y= kin(shift+1:end,:);
+    else
+        X = rate(1-shift:end,:);
+        X = [X ones(length(X),1)];
+        Y = kin(1:(shift+length(kin)),:);
+    end
+    A = mvregress(X,Y);
+    pred = X*A;
+    errs(i) = mean((pred(:) - Y(:)).^2);
+end
 
 % Which gives best predicitions?
+%The lag of 210 ms gives the best prediciton!
 
 % What if you use anti-causal time lag?
+% It's actually worse
 
 % If you want to build a full model that allows multiple time lags, it's
 % a simple adjustment to the data matrix = include columns for each time
 % lag.  Does that yield better performance? How many time lages give best
 % results? Do you think including more time lags always yields better
 % reconstructions?
+load('continuous2.mat');
 
+num_shifts = [5 10 50 100];
+shifts_errs = zeros(1,length(num_shifts));
+
+for i = 1:length(num_shifts)
+    X = [];
+    shifts = num_shifts(i)
+    for shift = 1:shifts
+        x = rate(1:end-shift,:);
+        x = x(shifts - shift + 1:end,:);
+        X = [X x];
+    end
+    
+    Y = kin(shifts+1:end,:);
+    X = [X ones(size(X,1),1)];
+    
+    A_f = mvregress(X,Y);
+    
+    pred_f = X*A_f;
+    err_f = mean((pred_f(:) - Y(:)).^2);
+    shifts_errs(1,i) = err_f;
+end
+shifts_errs
+[min_err, best_num_shifts] = min(shifts_errs)
+% Yes!! The performance is better! The best result can be achieved by
+% adding many 
 
 %% Part 2: Discrete Decoding - Bayes Clf
 % Since variability in neural responses is generally assumed Poisson, we
@@ -158,13 +238,13 @@ end
 % Make data into table
 datastruct = array2table(feats);
 label = array2table(label);
-datastruct = [datastruct label];
+datastruct = [datastruct];
 
 % A. Train the decoder using all the trials but the one set aside.
 % Essentially, comput mean spike counts for each neuron on each target.
-discrete_decoder = fitcnb(datastruct,label);
+discrete_decoder = fitcnb(datastruct,label); % Fit naive bayes clf  on train
 % B. Have the decoder predict the removed label
-Results(i,2) = predict(discrete_decoder,removedX(i,:));
+Results(i,2) = predict(discrete_decoder,removedX(i,:)); % Generate predictions
 end
 
 %% Plot the Confusion Matrix
@@ -172,6 +252,8 @@ end
 % actual target on x axis, and decoded target on y axis. Values are the
 % number of occurances of each combination of actual versus decoded. Plot
 % the histogram as a colormap.
+
+% We will count number correct
 OutMat = zeros(5);
 for y = 1:5
     for x = 1:5
@@ -184,11 +266,17 @@ for y = 1:5
         OutMat(x,y) = count;
     end
 end
+
+%Do so rearranging to generate intuitive visual (if we plot as is, it looks
+%flipped.
+
 yflipConfuMat = [];
 for index = 1:size(OutMat,2)
   confuCol = OutMat(:,index);
   yflipConfuMat(:,index) = confuCol(end:-1:1);
 end
+
+%Plot confusion matrix
 figure;
 imagesc(yflipConfuMat);
 colorbar;
@@ -199,3 +287,5 @@ set(gca,'XLim', [0.5 5.5],'xtick',1:5,'xticklabels',{'1','2','3','4','5'}...
     ,'YLim',[0.5 5.5],'ytick',1:5,'yticklabels',{'5','4','3','2','1'});
 % What is the decoder's overall percent correct? What are your thoughts on
 % how to improve the endpoint decoder's performance?
+% Ours is 100% correct. We could improve clf by not inferring independence,
+% e.g. remove naive assumption.

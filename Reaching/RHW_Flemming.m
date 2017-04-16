@@ -160,7 +160,7 @@ ylabel('Vertical Position','fontweight','bold','fontsize',16);
 
 
 
-%% 404) Instructions not found
+% 404) Instructions not found
 
 %% 5) Determine RT mean and standard deviations
 RTs = moveBounds(:,1) - timeGoCue';
@@ -394,10 +394,10 @@ set(gca,'XLim',[0 900],'XTickLabels',-300:100:600);
 
 
 %% 3) For each of the four cells, plot a tuning curve
-% Can unwrap the target array, to make it cartesian
+%Can unwrap the target array, to make it cartesian
 %To compute one point: add up all spike times during the epoch from 100 ms
 %after cue until 600ms after. Then, take average
-
+[TargAng,~] = car2pol(Target(:,1),Target(:,2))
 
 % Plot the avg fr as a function of target location. Y-axis = spikes/s
 
