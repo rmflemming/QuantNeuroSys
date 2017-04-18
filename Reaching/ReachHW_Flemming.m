@@ -120,7 +120,7 @@ end
 
 % Trim hand position by movement time
 movements = struct([]); %This will hold the trimmed positions
-
+chosen = zeros(length(R),1); % This is needed later to keep track of trimmed data
 for i = 1: length(R)
     %There is a two-line, faster way to do this, but I am too lazy to
     %recode it... movements.hhp = [movements.hhp; next one]; same for vhp
@@ -129,6 +129,7 @@ for i = 1: length(R)
         new_struct.hhp = R(i).hhp(moveBounds(i,1):moveBounds(i,2));
         new_struct.vhp = R(i).vhp(moveBounds(i,1):moveBounds(i,2));
         movements = [movements; new_struct];
+        chosen(i) = 1;
     end
 end
 
@@ -160,7 +161,7 @@ ylabel('Vertical Position','fontweight','bold','fontsize',16);
 
 
 
-% 404) Instructions not found
+%% 404) Instructions not found
 
 %% 5) Determine RT mean and standard deviations
 RTs = moveBounds(:,1) - timeGoCue';
@@ -178,13 +179,21 @@ stdRT = std(RTs);
 % We will want to determine the correct statistical test to determine
 % this... Let's see if we can frame the problem a little more thoroughly.
 % We have eight targets, and eight RT distributions to go along with each
-% target. We could do a permutation test, or maybe an ANOVA, to find out if
-% the distributions are different. We may be able to determine another
-% machine learning tool for answering this question. I will think on it
-% some and come back to it. I absolutely do not want to do the 8c2 post-hoc
-% t-tests.
+% target. We could do a 1-way anova to see if these distributions are
+% significantly different, and post-hoc t tests to learn more.
+RTs = NaN(length(R),8);
+c = 1;
+% Sort RTs by target
+for i = 1:length(R)
+    if chosen(i)
+        RTs(i,slxns(c)) = moveBounds(i,1) - R(i).timeGoCuePHOTO;
+        c = c + 1;
+    end
+    
+end
 
-
+%1-way anova
+anova1(RTs)
 
 %% 7) What are the mean and standard deviation of the monitor's latency?
     % And what would you estimate as the refresh rate (Hz)?
@@ -194,7 +203,7 @@ stdLag = std(latency);
 
 % Again, for fun we will plot the histogram
 % figure;
-% hist(latency);
+%hist(latency);
 % It appears to be a nearly uniform distribution (with a gap in the
 % middle?). I guess I would have to guess the refresh rate is 1/meanLag?
 
@@ -293,7 +302,7 @@ timeStart = [];
 upperRightIndex = [];
 for i = 1:length(R)
     if XY(i,1) == 86 && XY(i,2) == 50 %Only for upper right target
-        timeStart = [timeStart; R(i).timeGoCuePHOTO - 300];
+        timeStart = [timeStart; R(i).timeGoCue - 300];
         upperRightIndex = [upperRightIndex; i];
     end
 end
@@ -302,7 +311,7 @@ end
 spikes1 = zeros(length(upperRightIndex),900);
 spikes2 = zeros(length(upperRightIndex),900);
 spikes3 = zeros(length(upperRightIndex),900);
-spikes4 = zeros(length(upperRightIndex),900);
+spikes4 = zeros(length(upperRightIndex),900); %901
 
 % Get spike times during the 900 ms window. allign data so cue appears at
 % the 300th col. For each spike time, put a 1 within the corresponding bin.
@@ -329,6 +338,10 @@ for i = 1:length(upperRightIndex) %For each right target
 end
 % Now that we have the right trials, we will transform the spike times into
 % the binary data
+spikes1 = zeros(length(upperRightIndex),900);
+spikes2 =zeros(length(upperRightIndex),900);
+spikes3 =zeros(length(upperRightIndex),900);
+spikes4 =zeros(length(upperRightIndex),900);
 for i = 1:length(upperRightIndex)
     spike1times = cell1(i).spikeTimes - timeStart(i); % Get the spike times
     spike2times = cell2(i).spikeTimes - timeStart(i); % Shifted by the cue
@@ -336,15 +349,15 @@ for i = 1:length(upperRightIndex)
     spike4times = cell4(i).spikeTimes - timeStart(i);
     
     %Now we have to select only spike times within our interval
-    spike1times = spike1times(spike1times > -300);
-    spike2times = spike2times(spike2times > -300);
-    spike3times = spike3times(spike3times > -300);
-    spike4times = spike4times(spike4times > -300);
+    spike1times = spike1times(spike1times > 0);
+    spike2times = spike2times(spike2times > 0);
+    spike3times = spike3times(spike3times > 0);
+    spike4times = spike4times(spike4times > 0);
     
-    spike1times = spike1times(spike1times < 599.5);
-    spike2times = spike2times(spike2times < 599.5);
-    spike3times = spike3times(spike3times < 599.5);
-    spike4times = spike4times(spike4times < 599.5);
+    spike1times = spike1times(spike1times < 899.5);
+    spike2times = spike2times(spike2times < 899.5);
+    spike3times = spike3times(spike3times < 899.5);
+    spike4times = spike4times(spike4times < 899.5);
     
     spike1times = round(spike1times);
     spike2times = round(spike2times);
@@ -352,28 +365,36 @@ for i = 1:length(upperRightIndex)
     spike4times = round(spike4times);
     
     % Now we will transform the spike times into 1's
-    for ii = 1:length(spike1times)
-        spikes1(i,spike1times(ii)+301) = spikes1(i,spike1times(ii)+301) + 1;
+    if length(spike1times) > 0
+           for ii = 1:length(spike1times)
+            spikes1(i,spike1times(ii)+301) = 1;
+           end
     end
-    for ii = 1:length(spike2times)
-        spikes2(i,spike2times(ii)+ 301) = spikes2(i,spike2times(ii)+ 301) + 1;
+    if length(spike2times) > 0
+        for ii = 1:length(spike2times)
+            spikes2(i,spike2times(ii)+301) = 1;
+        end
     end
-    for ii = 1:length(spike3times)
-        spikes3(i,spike3times(ii)+ 301) = spikes3(i,spike3times(ii)+ 301) + 1;
-    end
-    for ii = 1:length(spike4times)
-        spikes4(i,spike4times(ii) + 301) = spikes4(i,spike4times(ii) + 301) + 1;
-    end
+    if length(spike3times) > 0
+        for ii = 1:length(spike3times)
+            spikes3(i,spike3times(ii)+301) = 1;
     
+        end
+    end
+    if length(spike4times) > 0
+        for ii = 1:length(spike4times)
+            spikes4(i,spike4times(ii) + 301) = 1;
+        end
+    end
 end
 
 %Convolve spike times with a gaussian kernel.
-gaus = fspecial('gaussian',5,0.5);
+gaus = normpdf(0:1:900,0,2);
 fr1 = mean(spikes1)*1000;
 fr2 = mean(spikes2)*1000;
 fr3 = mean(spikes3)*1000;
 fr4 = mean(spikes4)*1000;
-cell1out = conv2(fr1,gaus);
+cell1out = conv2(gaus,fr1);
 cell2out = conv2(fr2,gaus);
 cell3out = conv2(fr3,gaus);
 cell4out = conv2(fr4,gaus);
@@ -382,29 +403,91 @@ cell4out = conv2(fr4,gaus);
 %intervals.
 figure;
 subplot(4,1,1), bar(cell1out,'k');
-set(gca,'XLim',[0 900],'XTickLabels',-300:100:600);
+set(gca,'XLim',[300 1200],'XTickLabels',-300:100:600);
 subplot(4,1,2), bar(cell2out,'k');
-set(gca,'XLim',[0 900],'XTickLabels',-300:100:600);
+set(gca,'XLim',[300 1200],'XTickLabels',-300:100:600);
 subplot(4,1,3), bar(cell3out,'k');
-set(gca,'XLim',[0 900],'XTickLabels',-300:100:600);
+set(gca,'XLim',[300 1200],'XTickLabels',-300:100:600);
 subplot(4,1,4), bar(cell4out,'k');
 xlabel('Time relative to Cue(ms)','fontweight','bold','fontsize',16);
 ylabel('Spikes/s','fontweight','bold','fontsize',16);
-set(gca,'XLim',[0 900],'XTickLabels',-300:100:600);
+set(gca,'XLim',[300 1200],'XTickLabels',-300:100:600);
 
 
 %% 3) For each of the four cells, plot a tuning curve
-%Can unwrap the target array, to make it cartesian
+% Can unwrap the target array, to make it cartesian
 %To compute one point: add up all spike times during the epoch from 100 ms
 %after cue until 600ms after. Then, take average
-[TargAng,~] = car2pol(Target(:,1),Target(:,2))
+
+%Unwrap Targets into angles
+[TargAngle, rho] = cart2pol(Targets(:,1),Targets(:,2));
+TargAngle = rad2deg(TargAngle);
+for i = 1:length(TargAngle)
+    if TargAngle(i) < 0
+        TargAngle(i) = TargAngle(i) + 360;
+    end
+end
+
+%Get spike counts sorted by target and cell
+clear cell1 cell2 cell3 cell4 cells
+FRs = NaN(length(R),numel(TargAngle),length(R(1).cells));
+trial = 1;
+
+for i = 1:length(R)
+    if chosen(i) == 1%If this data has not been trimmed by procedures
+        begin = R(i).timeGoCuePHOTO + 100;
+        fin = begin + 500;
+        cells = R(i).cells;
+        for ii = 1:length(cells)
+            counts = find(cells(ii).spikeTimes(cells(ii).spikeTimes>begin & cells(ii).spikeTimes<fin));
+            if ~isempty(counts)
+                FRs(i,slxns(trial),ii) = counts(end);
+            end
+            clear counts
+        end
+        clear begin fin cells ii
+        trial = trial + 1;
+    end
+    
+end
+% Take the average spikes for each target
+avgSpikes = nanmean(FRs); %avg num spikes in 500ms window
+avgFRs = 1000 * avgSpikes / 500; % spikes/sec
 
 % Plot the avg fr as a function of target location. Y-axis = spikes/s
+colors = {'b','r','g','y'};
+figure;
+for i = 1:size(avgFRs,3)
+    scatter(TargAngle,avgFRs(:,:,i)',150,colors{i},'.');
+    hold on
+end
+fsize = 20;
+title('M1 Tuning Curves','fontsize',fsize,'fontweight','bold');
+xlabel('Target Angle (degrees)','fontsize',fsize,'fontweight','bold');
+ylabel('Firing Rate (spikes/sec)','fontsize',fsize,'fontweight','bold');
+%set(gca,'xticks',0:60:360)
 
 % Fit the data with a cosine
-
+costring = 'p(1) + p(2)*cos(theta-p(3))'; % cos fxn in string
+cosfun = inline(costring,'p','theta'); % string2fxn
+params = zeros(size(avgFRs,3),3);
+for i = 1:size(avgFRs,3)
+    p = nlinfit(deg2rad(TargAngle),avgFRs(:,:,i)',cosfun,[1,1,0]); % estimate params for cosine fit
+    params(i,:) = p;
+end
+hold on
+maxes = zeros(4,1);
+for i = 1:size(avgFRs,3)
+    tuningFit = cosfun(params(i,:),deg2rad(1:1:360));
+    [~,maxes(i)] = max(tuningFit);
+    plot(1:1:360,tuningFit',colors{i},'LineWidth',2)
+    hold on
+end
+hold off
 % Using the fit, find the preferred directions for the four cells. What are
 % they?
+
+% 191, 13, 7, and 125 degrees.
 
 
 
