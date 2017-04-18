@@ -86,7 +86,7 @@ hold off
 
 % Quantify performance somehow. Consider measuring the MSE between actual
 % and reconstructed reaches. 
-Err = mean(sqrt((train_test(:) - Y(:)).^2); % I should use the distances but I'm lazy
+Err = mean((train_test(:) - Y(:)).^2);
 
 %% 4) Load continuous2 and attempt to reconstruct new kinematic data
 % Load data
@@ -154,7 +154,7 @@ end
 % reconstructions?
 load('continuous2.mat');
 
-num_shifts = [5 10 50 100];
+num_shifts = 1:25;
 shifts_errs = zeros(1,length(num_shifts));
 
 for i = 1:length(num_shifts)

@@ -8,7 +8,6 @@ function im = retina(pct, sd, image)
     % these two lines rescale c between 0 and 1
     c = c - min(min(c)); 
     c = c/max(max(c));
-    keyboard    % uncomment this to explore how the code behaves.
     im = c;
     imshow(im)
 

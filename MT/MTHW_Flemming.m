@@ -25,10 +25,10 @@ Beta0 = [0.1,1.1];%initial parameter estimates, alpha,beta
 
 behfit = nlinfit(coherence,pctBeh,Weibull,Beta0);
 
-p = Weibull(behfit,coherence);
+p = Weibull(behfit,0:0.01:1);
 
 hold on
-plot(coherence,p,'LineWidth',2);
+plot(0:.01:1,p,'LineWidth',2);
 set(gca,'xlim',[0.01;1.01]);
 
 %% 2) Construct a neurometric curve from the pair of neurons, implement ROC
@@ -87,10 +87,10 @@ set(gca,'xscale','log')
 
 neurofit = nlinfit(coherence,neural_acc,Weibull,Beta0);
 
-p2 = Weibull(neurofit,coherence);
+p2 = Weibull(neurofit,0:.01:1);
 
 hold on
-plot(coherence,p2,'LineWidth',2);
+plot(0:.01:1,p2,'LineWidth',2);
 set(gca,'xlim',[0.01;1.01]);
 
 %% 3) Calculate Choice Probability
@@ -191,4 +191,5 @@ plot(cc,ii,'LineWidth',3);
 legend({'Individual Choice Probabilities','Mean'})
 %% 4) Does the animal have an internal bias that affects his choices?
 % If so, what do you estimate it to be?
+% Yes, 10% bias leftwards.
 

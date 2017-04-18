@@ -158,7 +158,7 @@ sprintf('It takes %d dimensions to account for 90%% of the variance', count)
 % Where would you estimate the elbow to be?
 % The elbow appears at 4-5 components.
 
-%% 7)Assign rasters to neurons. -- ONLY 2 NEURONS--
+%% 7)Assign rasters to neurons. -- ONLY 2 NEURONS-- Correct Raster is at the bottom
 
 % Choose a stretch of ~10s
 exp_dur = data.stamps(end);
@@ -297,21 +297,21 @@ hist(n1_ISI_trim*1000,5000); % Multiplied by 1000 to convert to ms
 title('Neuron 1 ISI','FontWeight','bold','FontSize',16)
 xlabel('Time(ms)','FontSize',14);
 ylabel('Occurances','FontSize',14);
-set(gca,'XLim',[0,500])
+set(gca,'XLim',[0,30])
 
 subplot(3,1,2);
 hist(n2_ISI_trim*1000,5000); % Multiplied by 1000 to convert to ms
 title('Neuron 2 ISI','FontWeight','bold','FontSize',16)
 xlabel('Time(ms)','FontSize',14);
 ylabel('Occurances','FontSize',14);
-set(gca,'XLim',[0,500])
+set(gca,'XLim',[0,30])
 
 subplot(3,1,3)
 hist(n3_ISI_trim*1000,5000); % Multiplied by 1000 to convert to ms
 title('Neuron 3 ISI','FontWeight','bold','FontSize',16)
 xlabel('Time(ms)','FontSize',14);
 ylabel('Occurances','FontSize',14);
-set(gca,'XLim',[0,500])
+set(gca,'XLim',[0,30])
 
 %Are the ISI histograms consistent with well-isolated neurons?
     %Yes, they have a single, non-zero peak and trail off beyond. There

@@ -181,7 +181,7 @@ figure
 %retina(.25,0.15,hgrid); % Shows white bg and black boxes, blurry
 %retina(0.005,0.15,hgrid); % Full black, fields too small
 %retina(0.1,0.15,hgrid); % Black edges, gray center box, gray x's in junctions where dots go
-%retina(0.075,0.15,hgrid); %Shows gray dots in junctions
+retina(0.075,0.15,hgrid); %Shows gray dots in junctions
 %retina(0.01,0.15,hgrid); %Gives gray background, only see color at edges
 %retina(0.5,0.15,hgrid); %Blurry rounded squares
 % ANSWER:
